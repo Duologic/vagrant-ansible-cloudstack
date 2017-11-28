@@ -1,0 +1,6 @@
+---
+- name: Restart CloudStack management
+  systemd:
+      name: cloudstack-management
+      state: restarted
+      enabled: yes

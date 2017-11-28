@@ -1,0 +1,12 @@
+---
+- name: Install and configure MariaDB
+  become: yes
+  hosts: all
+  tasks:
+    - include_role: name=mariadb
+
+- name: Install CloudStack
+  become: yes
+  hosts: all
+  tasks:
+    - include_role: name=cloudstack-management

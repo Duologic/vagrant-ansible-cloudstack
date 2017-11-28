@@ -1,0 +1,36 @@
+---
+- name: Set SELinux to permissive
+  selinux:
+      policy: targeted
+      state: permissive
+
+- name: Add CloudStack repository
+  yum_repository:
+      name: cloudstack
+      description: CloudStack repository
+      baseurl: https://download.cloudstack.org/centos/$releasever/4.10/
+      enabled: yes
+      gpgcheck: no
+
+- name: Install cloudstack-management
+  yum:
+    name: cloudstack-management
+    state: present
+    enablerepo: cloudstack
+  register: cloudstack_fresh_install
+
+- name: Setup CloudStack database
+  shell: cloudstack-setup-databases cloud:cloud@localhost --deploy-as=root
+  when: cloudstack_fresh_install.changed
+  notify: Restart CloudStack management
+
+- name: Setup CloudStack webserver
+  shell: cloudstack-setup-management --tomcat7
+  when: cloudstack_fresh_install.changed
+  notify: Restart CloudStack management
+
+- name: Start CloudStack management
+  systemd:
+    name: cloudstack-management
+    state: started
+    enabled: yes

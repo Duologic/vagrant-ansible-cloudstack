@@ -1,0 +1,60 @@
+---
+- name: Add MariaDB repository
+  yum_repository:
+    name: mariadb
+    description: MariaDB repositories
+    baseurl: http://yum.mariadb.org/10.1/centos7-amd64
+    gpgkey: https://yum.mariadb.org/RPM-GPG-KEY-MariaDB
+    gpgcheck: yes
+
+- name: Install MariaDB and dependencies
+  yum:
+    name:
+        - MariaDB-client
+        - MariaDB-common
+        - MariaDB-devel
+        - MariaDB-server
+        - MariaDB-shared
+        - MySQL-python
+    state: present
+    enablerepo: mariadb
+  register: mysql_fresh_install
+
+- name: Start MariaDB
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
+
+- name: Secure MariaDB installation
+  shell: mysql -u root -e "{{ item }}"
+  with_items:
+      - "DELETE FROM mysql.user WHERE User='';"
+      - "DELETE FROM mysql.user WHERE User='root' AND Host NOT IN ('localhost', '127.0.0.1', '::1');"
+      - "DROP DATABASE IF EXISTS test;"
+      - "DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';"
+      - "FLUSH PRIVILEGES;"
+  when: mysql_fresh_install.changed or mysql_secure_installation
+
+- name: Configure MariaDB
+  copy:
+    src: my.cnf
+    dest: /etc/my.cnf
+    owner: root
+    group: root
+    mode: 0644
+  notify: Restart MariaDB
+
+- name: Create MariaDB tmp directory
+  file:
+    path: /var/lib/mysql/tmp
+    state: directory
+    owner: mysql
+    group: mysql
+    mode: 0755
+
+- name: Start MariaDB
+  systemd:
+    name: mariadb
+    state: started
+    enabled: yes
